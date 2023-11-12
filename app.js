@@ -19,8 +19,8 @@ const initializeDBAndServer = async () => {
       filename: dbPath,
       driver: sqlite3.Database,
     })
-    app.listen(3001, () => {
-      console.log('Server Running at http://localhost:3001/')
+    app.listen(3000, () => {
+      console.log('Server Running at http://localhost:3000/')
     })
   } catch (e) {
     console.log(`DB Error: ${e.message}`)
@@ -32,45 +32,49 @@ initializeDBAndServer()
 
 const validateValues = (request, response, next) => {
   const {status, priority, category} = request.query
-  if (request.body !== undefined) {
+  let validDueDate = true
+  let formattedDate
+
+  if (request.method === 'POST' || request.method === 'PUT') {
     const {dueDate} = request.body
-    const formattedDate = format(dueDate, 'yyyy-MM-dd')
+    try {
+      formattedDate = format(dueDate, 'yyyy-MM-dd')
+    } catch (e) {
+      validDueDate = false
+      response.status(400)
+      response.send('Invalid Due Date')
+      console.log(e)
+    }
   }
-  let validCount = 0
+
+  let validStatus, validPriority, validCategory
   if (status !== undefined) {
-    if (status !== 'TO DO' || status !== 'IN PROGRESS' || status !== 'DONE') {
+    if (status !== 'TO DO' && status !== 'IN PROGRESS' && status !== 'DONE') {
       response.status(400)
       response.send('Invalid Todo Status')
     } else {
       validStatus = true
     }
   } else if (priority !== undefined) {
-    if (priority !== 'HIGH' || priority !== 'MEDIUM' || priority !== 'LOW') {
+    if (priority !== 'HIGH' && priority !== 'MEDIUM' && priority !== 'LOW') {
       response.status(400)
       response.send('Invalid Todo priority')
     } else {
       validPriority = true
     }
   } else if (category !== undefined) {
-    if (category !== 'WORK' || category !== 'HOME' || category !== 'LEARNING') {
+    if (category !== 'WORK' && category !== 'HOME' && category !== 'LEARNING') {
       response.status(400)
       response.send('Invalid Todo category')
     } else {
       validCategory = true
-    }
-  } else if (dueDate !== undefined) {
-    if (!isValid(formattedDate)) {
-      response.status(400)
-      response.send('Invalid Due Date')
-    } else {
-      validDueDate = true
     }
   }
   if (
     (status === undefined || validStatus) &&
     (priority === undefined || validPriority) &&
     (category === undefined || validCategory) &&
-    (dueDate === undefined || validStatus)
+    validDueDate
   ) {
     next()
   }
